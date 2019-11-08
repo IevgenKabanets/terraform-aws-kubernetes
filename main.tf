@@ -279,15 +279,6 @@ data "template_cloudinit_config" "node_cloud_init" {
   }
 }
 
-##########
-# Keypair
-##########
-
-resource "aws_key_pair" "keypair" {
-  key_name   = var.cluster_name
-  public_key = file(var.ssh_public_key)
-}
-
 #####
 # AMI image
 #####
@@ -323,10 +314,7 @@ resource "aws_eip" "master" {
 resource "aws_instance" "master" {
   instance_type = var.master_instance_type
 
-  ami = data.aws_ami.centos7.id
-
-  key_name = aws_key_pair.keypair.key_name
-
+  ami       = data.aws_ami.centos7.id
   subnet_id = var.master_subnet_id
 
   associate_public_ip_address = false
