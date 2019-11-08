@@ -1,3 +1,7 @@
+variable "ami_id" {
+  description = "Base AMI"
+}
+
 variable "aws_region" {
   description = "Region where Cloud Formation is created"
   default     = "eu-central-1"

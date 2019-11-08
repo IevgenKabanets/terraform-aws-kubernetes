@@ -314,7 +314,7 @@ resource "aws_eip" "master" {
 resource "aws_instance" "master" {
   instance_type = var.master_instance_type
 
-  ami       = data.aws_ami.centos7.id
+  ami       = var.ami_id
   subnet_id = var.master_subnet_id
 
   associate_public_ip_address = false
@@ -361,7 +361,7 @@ resource "aws_eip_association" "master_assoc" {
 
 resource "aws_launch_configuration" "nodes" {
   name_prefix          = "${var.cluster_name}-nodes-"
-  image_id             = data.aws_ami.centos7.id
+  image_id             = var.ami_id
   instance_type        = var.worker_instance_type
   iam_instance_profile = aws_iam_instance_profile.node_profile.name
 

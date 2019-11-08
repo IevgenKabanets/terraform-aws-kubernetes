@@ -28,9 +28,9 @@ FULL_HOSTNAME="$(curl -s http://169.254.169.254/latest/meta-data/hostname)"
 DNS_NAME=$(echo "$DNS_NAME" | tr 'A-Z' 'a-z')
 
 # Install AWS CLI client
-yum install -y epel-release
-yum install -y python2-pip
-pip install awscli --upgrade
+apt-get -y install python3 python3-pip
+pip3 install awscli --upgrade
+apt-get install -y apt-transport-https curl
 
 # Tag subnets
 for SUBNET in $AWS_SUBNETS
@@ -39,33 +39,32 @@ do
 done
 
 # Install docker
-yum install -y yum-utils device-mapper-persistent-data lvm2 docker
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+apt-get update -y
+apt-get install -y docker-ce docker-ce-cli containerd.io
+systemctl start docker
+systemctl enable docker
 
 # Install Kubernetes components
-sudo cat <<EOF > /etc/yum.repos.d/kubernetes.repo
-[kubernetes]
-name=Kubernetes
-baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
-enabled=1
-gpgcheck=1
-repo_gpgcheck=1
-gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
-        https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+cat <<EOF | tee /etc/apt/sources.list.d/kubernetes.list
+deb https://apt.kubernetes.io/ kubernetes-xenial main
 EOF
+apt-get update -y
+apt-get install -y kubelet=$KUBERNETES_VERSION kubeadm kubectl
+apt-mark hold kubelet kubeadm kubectl
+swapoff -a
 
-# setenforce returns non zero if already SE Linux is already disabled
-is_enforced=$(getenforce)
-if [[ $is_enforced != "Disabled" ]]; then
-  setenforce 0
-  sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
-  
-fi
+# # setenforce returns non zero if already SE Linux is already disabled
+# is_enforced=$(getenforce)
+# if [[ $is_enforced != "Disabled" ]]; then
+#   setenforce 0
+#   sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
+# fi
 
-yum install -y kubelet-$KUBERNETES_VERSION kubeadm-$KUBERNETES_VERSION kubernetes-cni
 
 # Start services
-systemctl enable docker
-systemctl start docker
 systemctl enable kubelet
 systemctl start kubelet
 
@@ -74,10 +73,10 @@ sysctl net.bridge.bridge-nf-call-iptables=1
 sysctl net.bridge.bridge-nf-call-ip6tables=1
 
 # Fix certificates file on CentOS
-if cat /etc/*release | grep ^NAME= | grep CentOS ; then
-    rm -rf /etc/ssl/certs/ca-certificates.crt/
-    cp /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
-fi
+# if cat /etc/*release | grep ^NAME= | grep CentOS ; then
+#     rm -rf /etc/ssl/certs/ca-certificates.crt/
+#     cp /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
+# fi
 
 # Initialize the master
 cat >/tmp/kubeadm.yaml <<EOF
@@ -145,18 +144,18 @@ kubectl apply -f /tmp/calico.yaml
 kubectl create clusterrolebinding admin-cluster-binding --clusterrole=cluster-admin --user=admin
 
 # Prepare the kubectl config file for download to client (IP address)
-export KUBECONFIG_OUTPUT=/home/centos/kubeconfig_ip
+export KUBECONFIG_OUTPUT=/home/ubuntu/kubeconfig_ip
 kubeadm alpha kubeconfig user \
   --client-name admin \
   --apiserver-advertise-address $IP_ADDRESS \
   > $KUBECONFIG_OUTPUT
-chown centos:centos $KUBECONFIG_OUTPUT
+chown ubuntu:ubuntu $KUBECONFIG_OUTPUT
 chmod 0600 $KUBECONFIG_OUTPUT
 
-cp /home/centos/kubeconfig_ip /home/centos/kubeconfig
-sed -i "s/server: https:\/\/$IP_ADDRESS:6443/server: https:\/\/$DNS_NAME:6443/g" /home/centos/kubeconfig
-chown centos:centos /home/centos/kubeconfig
-chmod 0600 /home/centos/kubeconfig
+cp /home/ubuntu/kubeconfig_ip /home/ubuntu/kubeconfig
+sed -i "s/server: https:\/\/$IP_ADDRESS:6443/server: https:\/\/$DNS_NAME:6443/g" /home/ubuntu/kubeconfig
+chown ubuntu:ubuntu /home/ubuntu/kubeconfig
+chmod 0600 /home/ubuntu/kubeconfig
 
 # Load addons
 for ADDON in $ADDONS
