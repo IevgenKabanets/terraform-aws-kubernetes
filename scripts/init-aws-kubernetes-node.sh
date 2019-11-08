@@ -14,39 +14,29 @@ export KUBERNETES_VERSION="1.16.2"
 # Set this only after setting the defaults
 set -o nounset
 
-# We to match the hostname expected by kubeadm an the hostname used by kubelet
+# We needed to match the hostname expected by kubeadm an the hostname used by kubelet
 FULL_HOSTNAME="$(curl -s http://169.254.169.254/latest/meta-data/hostname)"
 
 # Make DNS lowercase
 DNS_NAME=$(echo "$DNS_NAME" | tr 'A-Z' 'a-z')
 
 # Install docker
-yum install -y yum-utils device-mapper-persistent-data lvm2 docker
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+apt-get update -y
+apt-get install -y docker-ce docker-ce-cli containerd.io
+systemctl start docker
+systemctl enable docker
 
 # Install Kubernetes components
-sudo cat <<EOF > /etc/yum.repos.d/kubernetes.repo
-[kubernetes]
-name=Kubernetes
-baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
-enabled=1
-gpgcheck=1
-repo_gpgcheck=1
-gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
-        https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+cat <<EOF | tee /etc/apt/sources.list.d/kubernetes.list
+deb https://apt.kubernetes.io/ kubernetes-xenial main
 EOF
-
-# setenforce returns non zero if already SE Linux is already disabled
-is_enforced=$(getenforce)
-if [[ $is_enforced != "Disabled" ]]; then
-  setenforce 0
-  sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
-fi
-
-yum install -y kubelet-$KUBERNETES_VERSION kubeadm-$KUBERNETES_VERSION kubernetes-cni
-
-# Start services
-systemctl enable docker
-systemctl start docker
+apt-get update -y
+apt-get install -y kubelet kubeadm kubectl
+apt-mark hold kubelet kubeadm kubectl
+swapoff -a
 systemctl enable kubelet
 systemctl start kubelet
 
@@ -54,11 +44,11 @@ systemctl start kubelet
 sysctl net.bridge.bridge-nf-call-iptables=1
 sysctl net.bridge.bridge-nf-call-ip6tables=1
 
-# Fix certificates file on CentOS
-if cat /etc/*release | grep ^NAME= | grep CentOS ; then
-    rm -rf /etc/ssl/certs/ca-certificates.crt/
-    cp /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
-fi
+# # Fix certificates file on CentOS
+# if cat /etc/*release | grep ^NAME= | grep CentOS ; then
+#     rm -rf /etc/ssl/certs/ca-certificates.crt/
+#     cp /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt
+# fi
 
 # Initialize the master
 cat >/tmp/kubeadm.yaml <<EOF
