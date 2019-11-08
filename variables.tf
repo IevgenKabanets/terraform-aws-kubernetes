@@ -3,6 +3,13 @@ variable "aws_region" {
   default     = "eu-central-1"
 }
 
+variable "aws_profile" {
+  description = "AWS profile to use for provider"
+}
+
+variable "allowed_account_ids" {
+  description = "Limit the provider by account_id"
+}
 variable "cluster_name" {
   description = "Name of the AWS Kubernetes cluster - will be used to name all created resources"
 }
@@ -14,7 +21,7 @@ variable "tags" {
 
 variable "tags2" {
   description = "Tags in format used for the AWS Autoscaling Group"
-  type        = list(object({key = string, value = string, propagate_at_launch = bool}))
+  type        = list(object({ key = string, value = string, propagate_at_launch = bool }))
 }
 
 variable "addons" {
