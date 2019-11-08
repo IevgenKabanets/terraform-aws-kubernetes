@@ -4,8 +4,15 @@
 
 # Retrieve AWS credentials from env variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
 provider "aws" {
-  region = var.aws_region
+  version = "~> 2.33.0"
+  region  = var.aws_region
+
+  access_key          = ""
+  secret_key          = ""
+  profile             = var.aws_profile
+  allowed_account_ids = var.allowed_account_ids
 }
+
 
 #####
 # Generate kubeadm token
@@ -56,8 +63,8 @@ EOF
 }
 
 resource "aws_iam_policy_attachment" "master-attach" {
-  name = "master-attachment"
-  roles = [aws_iam_role.master_role.name]
+  name       = "master-attachment"
+  roles      = [aws_iam_role.master_role.name]
   policy_arn = aws_iam_policy.master_policy.arn
 }
 
@@ -65,6 +72,12 @@ resource "aws_iam_instance_profile" "master_profile" {
   name = "${var.cluster_name}-master"
   role = aws_iam_role.master_role.name
 }
+
+resource "aws_iam_role_policy_attachment" "ec2_master_role_policy_attachment" {
+  role       = aws_iam_role.master_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
 
 # Node
 
@@ -75,10 +88,10 @@ data "template_file" "node_policy_json" {
 }
 
 resource "aws_iam_policy" "node_policy" {
-  name = "${var.cluster_name}-node"
-  path = "/"
+  name        = "${var.cluster_name}-node"
+  path        = "/"
   description = "Policy for role ${var.cluster_name}-node"
-  policy = data.template_file.node_policy_json.rendered
+  policy      = data.template_file.node_policy_json.rendered
 }
 
 resource "aws_iam_role" "node_role" {
@@ -111,6 +124,11 @@ resource "aws_iam_policy_attachment" "node-attach" {
 resource "aws_iam_instance_profile" "node_profile" {
   name = "${var.cluster_name}-node"
   role = aws_iam_role.node_role.name
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_node_role_policy_attachment" {
+  role       = aws_iam_role.node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 #####
@@ -394,11 +412,11 @@ resource "aws_autoscaling_group" "nodes" {
       key                 = "kubernetes.io/cluster/${var.cluster_name}"
       value               = "owned"
       propagate_at_launch = true
-    },
-    {
-      key                 = "Name"
-      value               = "${var.cluster_name}-node"
-      propagate_at_launch = true
+      },
+      {
+        key                 = "Name"
+        value               = "${var.cluster_name}-node"
+        propagate_at_launch = true
     }],
     var.tags2,
   )
