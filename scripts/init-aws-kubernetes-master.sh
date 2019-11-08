@@ -28,6 +28,7 @@ FULL_HOSTNAME="$(curl -s http://169.254.169.254/latest/meta-data/hostname)"
 DNS_NAME=$(echo "$DNS_NAME" | tr 'A-Z' 'a-z')
 
 # Install AWS CLI client
+apt-get -y update
 apt-get -y install python3 python3-pip
 pip3 install awscli --upgrade
 apt-get install -y apt-transport-https curl
