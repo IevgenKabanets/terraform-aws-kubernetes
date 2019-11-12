@@ -311,21 +311,40 @@ resource "aws_eip" "master" {
   vpc = true
 }
 
-resource "aws_instance" "master" {
-  instance_type = var.master_instance_type
+resource "aws_launch_configuration" "masters" {
+  name_prefix          = "${var.cluster_name}-masters-"
+  image_id             = var.ami_id
+  instance_type        = var.master_instance_type
+  iam_instance_profile = aws_iam_instance_profile.master_profile.name
 
-  ami       = var.ami_id
-  subnet_id = var.master_subnet_id
-
-  associate_public_ip_address = false
-
-  vpc_security_group_ids = [
+  security_groups = [
     aws_security_group.kubernetes.id,
   ]
 
-  iam_instance_profile = aws_iam_instance_profile.master_profile.name
+  associate_public_ip_address = var.public_master
 
   user_data = data.template_cloudinit_config.master_cloud_init.rendered
+
+  root_block_device {
+    volume_type           = "gp2"
+    volume_size           = "50"
+    delete_on_termination = true
+  }
+
+  lifecycle {
+    create_before_destroy = true
+    ignore_changes        = [user_data]
+  }
+}
+
+resource "aws_autoscaling_group" "masters" {
+  vpc_zone_identifier = var.master_subnet_ids
+
+  name                 = "${var.cluster_name}-masters"
+  max_size             = var.max_master_count
+  min_size             = var.min_master_count
+  desired_capacity     = var.min_master_count
+  launch_configuration = aws_launch_configuration.masters.name
 
   tags = merge(
     {
@@ -335,25 +354,54 @@ resource "aws_instance" "master" {
     var.tags,
   )
 
-  root_block_device {
-    volume_type           = "gp2"
-    volume_size           = "50"
-    delete_on_termination = true
-  }
-
   lifecycle {
-    ignore_changes = [
-      ami,
-      user_data,
-      associate_public_ip_address,
-    ]
+    ignore_changes = [desired_capacity]
   }
 }
 
-resource "aws_eip_association" "master_assoc" {
-  instance_id   = aws_instance.master.id
-  allocation_id = aws_eip.master.id
-}
+# resource "aws_instance" "master" {
+# instance_type = var.master_instance_type
+
+# ami       = var.ami_id
+# subnet_id = var.master_subnet_id
+
+# associate_public_ip_address = false
+
+# vpc_security_group_ids = [
+#   aws_security_group.kubernetes.id,
+# ]
+
+# iam_instance_profile = aws_iam_instance_profile.master_profile.name
+
+# user_data = data.template_cloudinit_config.master_cloud_init.rendered
+
+#   tags = merge(
+#     {
+#       "Name"                                               = join("-", [var.cluster_name, "master"])
+#       format("kubernetes.io/cluster/%v", var.cluster_name) = "owned"
+#     },
+#     var.tags,
+#   )
+
+#   root_block_device {
+#     volume_type           = "gp2"
+#     volume_size           = "50"
+#     delete_on_termination = true
+#   }
+
+#   lifecycle {
+#     ignore_changes = [
+#       ami,
+#       user_data,
+#       associate_public_ip_address,
+#     ]
+#   }
+# }
+
+# resource "aws_eip_association" "master_assoc" {
+#   instance_id   = aws_instance.master.id
+#   allocation_id = aws_eip.master.id
+# }
 
 #####
 # Nodes

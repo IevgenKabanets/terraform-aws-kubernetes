@@ -43,7 +43,8 @@ variable "worker_instance_type" {
   default     = "t2.medium"
 }
 
-variable "master_subnet_id" {
+variable "master_subnet_ids" {
+  type        = list(string)
   description = "The subnet-id to be used for the master instance. Master can be only in single subnet. All subnets have to belong to the same VPC."
 }
 
@@ -51,6 +52,15 @@ variable "worker_subnet_ids" {
   description = "The subnet-ids to be used for the worker instances. Workers can be in multiple subnets. Worker subnets can contain also the master subnet. If you want to run workers in different subnet(s) than master you have to tag the subnets with kubernetes.io/cluster/{cluster_name}=shared.  All subnets have to belong to the same VPC."
   type        = list(string)
 }
+
+variable "min_master_count" {
+  description = "Minimal number of master nodes"
+}
+
+variable "max_master_count" {
+  description = "Maximal number of master nodes"
+}
+
 
 variable "min_worker_count" {
   description = "Minimal number of worker nodes"

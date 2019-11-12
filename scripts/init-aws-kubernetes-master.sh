@@ -153,8 +153,8 @@ kubeadm alpha kubeconfig user \
 chown ubuntu:ubuntu $KUBECONFIG_OUTPUT
 chmod 0600 $KUBECONFIG_OUTPUT
 
-cp /home/ubuntu/kubeconfig_ip /home/ubuntu/kubeconfig
-sed -i "s/server: https:\/\/$IP_ADDRESS:6443/server: https:\/\/$DNS_NAME:6443/g" /home/ubuntu/kubeconfig
+cp /etc/kubernetes/admin.conf /home/ubuntu/kubeconfig
+# sed -i "s/server: https:\/\/$IP_ADDRESS:6443/server: https:\/\/$DNS_NAME:6443/g" /home/ubuntu/kubeconfig
 chown ubuntu:ubuntu /home/ubuntu/kubeconfig
 chmod 0600 /home/ubuntu/kubeconfig
 
