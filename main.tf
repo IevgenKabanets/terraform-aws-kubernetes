@@ -226,7 +226,7 @@ data "template_file" "init_master" {
     asg_name      = "${var.cluster_name}-nodes"
     asg_min_nodes = var.min_worker_count
     asg_max_nodes = var.max_worker_count
-    aws_subnets   = join(" ", concat(var.worker_subnet_ids, var.master_subnet_ids))
+    aws_subnets   = join(" ", concat(var.worker_subnet_ids, [var.master_subnet_id]))
   }
 }
 
