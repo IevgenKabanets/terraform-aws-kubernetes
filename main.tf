@@ -344,10 +344,10 @@ resource "aws_autoscaling_group" "masters" {
   desired_capacity     = var.min_master_count
   launch_configuration = aws_launch_configuration.masters.name
 
-  tags = {
+  tags = [{
     "Name"                                               = join("-", [var.cluster_name, "master"])
     format("kubernetes.io/cluster/%v", var.cluster_name) = "owned"
-  }
+  }]
   # var.tags,
 
   lifecycle {
