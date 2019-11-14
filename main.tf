@@ -282,7 +282,7 @@ data "template_cloudinit_config" "node_cloud_init" {
 
 resource "aws_eip" "master" {
   vpc = true
-# }
+}
 
 # resource "aws_launch_configuration" "masters" {
 #   name_prefix          = "${var.cluster_name}-masters-"
@@ -412,8 +412,6 @@ resource "aws_route53_record" "master" {
   ttl     = 300
 }
 
-
-
 resource "aws_instance" "master" {
   instance_type = var.master_instance_type
 
@@ -431,7 +429,7 @@ resource "aws_instance" "master" {
   user_data = data.template_cloudinit_config.master_cloud_init.rendered
 
   tags = {
-    "Name"                                               = join("-", [var.cluster_name, "master"])
+    Name                                                 = join("-", [var.cluster_name, "master"])
     format("kubernetes.io/cluster/%v", var.cluster_name) = "owned"
   }
 
@@ -451,7 +449,6 @@ resource "aws_instance" "master" {
 }
 
 resource "aws_eip_association" "master_assoc" {
-  instance_id   = aws_instance.master.id
-  allocation_id = aws_eip.master.id
+  instance_id   = "${aws_instance.master.id}"
+  allocation_id = "${aws_eip.master.id}"
 }
-
