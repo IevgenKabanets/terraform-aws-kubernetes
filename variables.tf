@@ -71,7 +71,12 @@ variable "max_worker_count" {
 }
 
 variable "public_worker" {
-  description = "Weither or not the workers should have a public IP"
+  description = "Whether or not the workers should have a public IP"
+  default     = true
+}
+
+variable "public_master" {
+  description = "Whether or not the workers should have a public IP"
   default     = true
 }
 
