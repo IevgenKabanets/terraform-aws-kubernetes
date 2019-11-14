@@ -18,10 +18,10 @@ variable "cluster_name" {
   description = "Name of the AWS Kubernetes cluster - will be used to name all created resources"
 }
 
-variable "tags" {
-  description = "Tags used for the AWS resources created by this template"
-  type        = map(string)
-}
+# variable "tags" {
+#   description = "Tags used for the AWS resources created by this template"
+#   type        = map(string)
+# }
 
 variable "tags2" {
   description = "Tags in format used for the AWS Autoscaling Group"
