@@ -137,7 +137,7 @@ resource "aws_iam_role_policy_attachment" "ec2_node_role_policy_attachment" {
 
 # Find VPC details based on Master subnet
 data "aws_subnet" "cluster_subnet" {
-  id = var.master_subnet_id
+  id = var.master_subnet_ids[0]
 }
 
 resource "aws_security_group" "kubernetes" {
@@ -228,7 +228,7 @@ data "template_file" "init_master" {
     asg_name      = "${var.cluster_name}-nodes"
     asg_min_nodes = var.min_worker_count
     asg_max_nodes = var.max_worker_count
-    aws_subnets   = join(" ", concat(var.worker_subnet_ids, [var.master_subnet_id]))
+    aws_subnets   = join(" ", concat(var.worker_subnet_ids, var.master_subnet_ids))
   }
 }
 
@@ -236,10 +236,10 @@ data "template_file" "init_node" {
   template = file("${path.module}/scripts/init-aws-kubernetes-node.sh")
 
   vars = {
-    kubeadm_token     = module.kubeadm-token.token
-    master_ip         = aws_eip.master.public_ip
-    master_private_ip = aws_instance.master.private_ip
-    dns_name          = "${var.cluster_name}.${var.hosted_zone}"
+    kubeadm_token = module.kubeadm-token.token
+    # master_ip         = aws_eip.master.public_ip
+    # master_private_ip = aws_instance.master.private_ip
+    dns_name = "${var.cluster_name}.${var.hosted_zone}"
   }
 }
 
