@@ -235,7 +235,6 @@ data "template_file" "init_node" {
 
   vars = {
     kubeadm_token = module.kubeadm-token.token
-    # master_ip         = aws_eip.master.public_ip
     # master_private_ip = aws_instance.master.private_ip
     dns_name = "${var.cluster_name}.${var.hosted_zone}"
   }
@@ -278,113 +277,26 @@ data "template_cloudinit_config" "node_cloud_init" {
 }
 
 #####
-# AMI image
-#####
-
-data "aws_ami" "centos7" {
-  most_recent = true
-  owners      = ["aws-marketplace"]
-
-  filter {
-    name   = "product-code"
-    values = ["aw0evgkw8e5c1q413zgy5pjce"]
-  }
-
-  filter {
-    name   = "architecture"
-    values = ["x86_64"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-}
-
-#####
 # Master - EC2 instance
 #####
 
 resource "aws_eip" "master" {
   vpc = true
-}
+# }
 
-resource "aws_launch_configuration" "masters" {
-  name_prefix          = "${var.cluster_name}-masters-"
-  image_id             = var.ami_id
-  instance_type        = var.master_instance_type
-  iam_instance_profile = aws_iam_instance_profile.master_profile.name
+# resource "aws_launch_configuration" "masters" {
+#   name_prefix          = "${var.cluster_name}-masters-"
+#   image_id             = var.ami_id
+#   instance_type        = var.master_instance_type
+#   iam_instance_profile = aws_iam_instance_profile.master_profile.name
 
-  security_groups = [
-    aws_security_group.kubernetes.id,
-  ]
+#   security_groups = [
+#     aws_security_group.kubernetes.id,
+#   ]
 
-  associate_public_ip_address = var.public_master
+#   associate_public_ip_address = var.public_master
 
-  user_data = data.template_cloudinit_config.master_cloud_init.rendered
-
-  root_block_device {
-    volume_type           = "gp2"
-    volume_size           = "50"
-    delete_on_termination = true
-  }
-
-  lifecycle {
-    create_before_destroy = true
-    ignore_changes        = [user_data]
-  }
-}
-
-resource "aws_autoscaling_group" "masters" {
-  vpc_zone_identifier = var.master_subnet_ids
-
-  name                 = "${var.cluster_name}-masters"
-  max_size             = var.max_master_count
-  min_size             = var.min_master_count
-  desired_capacity     = var.min_master_count
-  launch_configuration = aws_launch_configuration.masters.name
-
-  tags = concat(
-    [{
-      key                 = "kubernetes.io/cluster/${var.cluster_name}"
-      value               = "owned"
-      propagate_at_launch = true
-      },
-      {
-        key                 = "Name"
-        value               = "${var.cluster_name}-master"
-        propagate_at_launch = true
-    }],
-    var.tags2,
-  )
-  lifecycle {
-    ignore_changes = [desired_capacity]
-  }
-}
-
-# resource "aws_instance" "master" {
-# instance_type = var.master_instance_type
-
-# ami       = var.ami_id
-# subnet_id = var.master_subnet_id
-
-# associate_public_ip_address = false
-
-# vpc_security_group_ids = [
-#   aws_security_group.kubernetes.id,
-# ]
-
-# iam_instance_profile = aws_iam_instance_profile.master_profile.name
-
-# user_data = data.template_cloudinit_config.master_cloud_init.rendered
-
-#   tags = merge(
-#     {
-#       "Name"                                               = join("-", [var.cluster_name, "master"])
-#       format("kubernetes.io/cluster/%v", var.cluster_name) = "owned"
-#     },
-#     var.tags,
-#   )
+#   user_data = data.template_cloudinit_config.master_cloud_init.rendered
 
 #   root_block_device {
 #     volume_type           = "gp2"
@@ -393,17 +305,36 @@ resource "aws_autoscaling_group" "masters" {
 #   }
 
 #   lifecycle {
-#     ignore_changes = [
-#       ami,
-#       user_data,
-#       associate_public_ip_address,
-#     ]
+#     create_before_destroy = true
+#     ignore_changes        = [user_data]
 #   }
 # }
 
-# resource "aws_eip_association" "master_assoc" {
-#   instance_id   = aws_instance.master.id
-#   allocation_id = aws_eip.master.id
+# resource "aws_autoscaling_group" "masters" {
+#   vpc_zone_identifier = var.master_subnet_ids
+
+#   name                 = "${var.cluster_name}-masters"
+#   max_size             = var.max_master_count
+#   min_size             = var.min_master_count
+#   desired_capacity     = var.min_master_count
+#   launch_configuration = aws_launch_configuration.masters.name
+
+#   tags = concat(
+#     [{
+#       key                 = "kubernetes.io/cluster/${var.cluster_name}"
+#       value               = "owned"
+#       propagate_at_launch = true
+#       },
+#       {
+#         key                 = "Name"
+#         value               = "${var.cluster_name}-master"
+#         propagate_at_launch = true
+#     }],
+#     var.tags2,
+#   )
+#   lifecycle {
+#     ignore_changes = [desired_capacity]
+#   }
 # }
 
 #####
@@ -411,6 +342,7 @@ resource "aws_autoscaling_group" "masters" {
 #####
 
 resource "aws_launch_configuration" "nodes" {
+  depends_on           = [aws_autoscaling_group.masters]
   name_prefix          = "${var.cluster_name}-nodes-"
   image_id             = var.ami_id
   instance_type        = var.worker_instance_type
@@ -437,14 +369,13 @@ resource "aws_launch_configuration" "nodes" {
 }
 
 resource "aws_autoscaling_group" "nodes" {
-  vpc_zone_identifier = var.worker_subnet_ids
-
+  depends_on           = [aws_autoscaling_group.masters]
   name                 = "${var.cluster_name}-nodes"
   max_size             = var.max_worker_count
   min_size             = var.min_worker_count
   desired_capacity     = var.min_worker_count
   launch_configuration = aws_launch_configuration.nodes.name
-
+  vpc_zone_identifier  = var.worker_subnet_ids
   tags = concat(
     [{
       key                 = "kubernetes.io/cluster/${var.cluster_name}"
@@ -479,5 +410,48 @@ resource "aws_route53_record" "master" {
   type    = "A"
   records = [aws_eip.master.public_ip]
   ttl     = 300
+}
+
+
+
+resource "aws_instance" "master" {
+  instance_type = var.master_instance_type
+
+  ami       = var.ami_id
+  subnet_id = var.master_subnet_id
+
+  associate_public_ip_address = false
+
+  vpc_security_group_ids = [
+    aws_security_group.kubernetes.id,
+  ]
+
+  iam_instance_profile = aws_iam_instance_profile.master_profile.name
+
+  user_data = data.template_cloudinit_config.master_cloud_init.rendered
+
+  tags = {
+    "Name"                                               = join("-", [var.cluster_name, "master"])
+    format("kubernetes.io/cluster/%v", var.cluster_name) = "owned"
+  }
+
+  root_block_device {
+    volume_type           = "gp2"
+    volume_size           = "50"
+    delete_on_termination = true
+  }
+
+  lifecycle {
+    ignore_changes = [
+      ami,
+      user_data,
+      associate_public_ip_address,
+    ]
+  }
+}
+
+resource "aws_eip_association" "master_assoc" {
+  instance_id   = aws_instance.master.id
+  allocation_id = aws_eip.master.id
 }
 
