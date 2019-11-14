@@ -234,9 +234,9 @@ data "template_file" "init_node" {
   template = file("${path.module}/scripts/init-aws-kubernetes-node.sh")
 
   vars = {
-    kubeadm_token = module.kubeadm-token.token
-    # master_private_ip = aws_instance.master.private_ip
-    dns_name = "${var.cluster_name}.${var.hosted_zone}"
+    kubeadm_token     = module.kubeadm-token.token
+    master_private_ip = aws_instance.master.private_ip
+    dns_name          = "${var.cluster_name}.${var.hosted_zone}"
   }
 }
 
