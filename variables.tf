@@ -43,8 +43,8 @@ variable "worker_instance_type" {
   default     = "t2.medium"
 }
 
-variable "master_subnet_ids" {
-  type        = list(string)
+variable "master_subnet_id" {
+  type        = string
   description = "The subnet-id to be used for the master instance. Master can be only in single subnet. All subnets have to belong to the same VPC."
 }
 

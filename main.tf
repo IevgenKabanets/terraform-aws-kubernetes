@@ -137,7 +137,7 @@ resource "aws_iam_role_policy_attachment" "ec2_node_role_policy_attachment" {
 
 # Find VPC details based on Master subnet
 data "aws_subnet" "cluster_subnet" {
-  id = var.master_subnet_ids[0]
+  id = var.master_subnet_id
 }
 
 resource "aws_security_group" "kubernetes" {
@@ -342,7 +342,7 @@ resource "aws_eip" "master" {
 #####
 
 resource "aws_launch_configuration" "nodes" {
-  depends_on           = [aws_autoscaling_group.masters]
+  # depends_on           = [aws_autoscaling_group.masters]
   name_prefix          = "${var.cluster_name}-nodes-"
   image_id             = var.ami_id
   instance_type        = var.worker_instance_type
@@ -369,7 +369,7 @@ resource "aws_launch_configuration" "nodes" {
 }
 
 resource "aws_autoscaling_group" "nodes" {
-  depends_on           = [aws_autoscaling_group.masters]
+  # depends_on           = [aws_autoscaling_group.masters]
   name                 = "${var.cluster_name}-nodes"
   max_size             = var.max_worker_count
   min_size             = var.min_worker_count
