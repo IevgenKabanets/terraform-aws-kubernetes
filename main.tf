@@ -144,13 +144,11 @@ resource "aws_security_group" "kubernetes" {
   vpc_id = data.aws_subnet.cluster_subnet.vpc_id
   name   = var.cluster_name
 
-  tags = merge(
-    {
-      "Name"                                               = var.cluster_name
-      format("kubernetes.io/cluster/%v", var.cluster_name) = "owned"
-    },
-    var.tags,
-  )
+  tags = {
+    "Name"                                               = var.cluster_name
+    format("kubernetes.io/cluster/%v", var.cluster_name) = "owned"
+  }
+  # var.tags,
 }
 
 # Allow outgoing connectivity
@@ -346,13 +344,11 @@ resource "aws_autoscaling_group" "masters" {
   desired_capacity     = var.min_master_count
   launch_configuration = aws_launch_configuration.masters.name
 
-  tags = merge(
-    {
-      "Name"                                               = join("-", [var.cluster_name, "master"])
-      format("kubernetes.io/cluster/%v", var.cluster_name) = "owned"
-    },
-    var.tags,
-  )
+  tags = {
+    "Name"                                               = join("-", [var.cluster_name, "master"])
+    format("kubernetes.io/cluster/%v", var.cluster_name) = "owned"
+  }
+  # var.tags,
 
   lifecycle {
     ignore_changes = [desired_capacity]
